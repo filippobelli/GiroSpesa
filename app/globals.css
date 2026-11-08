@@ -178,3 +178,18 @@ html,body{overscroll-behavior-y:none}
 .danger-btn{margin-right:auto;background:#fff;border:1px solid #f0d6d1;color:#a74e42;border-radius:7px;padding:9px 12px;font-size:11px;font-weight:600}
 .danger-btn:disabled{opacity:.45;cursor:not-allowed}
 .empty-add{margin-top:14px}
+
+/* Import list */
+.heading-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.import-text{width:100%;min-height:240px;flex:1;resize:vertical;border:1px solid #e5e9e2;border-radius:10px;padding:12px;font:inherit;font-size:16px;line-height:1.5;outline:none;color:var(--ink)}
+.import-text:focus{border-color:#8eae95}
+.import-summary{margin:0 0 10px;font-size:13px;color:#6f756c}
+.import-summary span{color:#9ba097}
+.import-row{display:flex;align-items:center;gap:9px;min-height:50px;padding:6px 8px 6px 12px;border-bottom:1px solid #f0f1ee;background:#fff}
+.import-row:last-child{border-bottom:0}
+.import-row.import-doubt{background:#fff8ef}
+.import-row select{flex:none;width:118px;height:34px;border:1px solid #e5e9e2;border-radius:7px;background:#fff;font-size:13px;padding:0 6px;color:var(--ink)}
+.import-row .picker-name small{color:#c08a4a}
+.import-remove{flex:none;width:30px;height:30px;border:0;border-radius:50%;background:#f4f6f2;color:#8a9087;font-size:17px}
+.import-check{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:13px;color:#4f564d;flex:none}
+.import-check input{width:18px;height:18px;accent-color:#527e65}
