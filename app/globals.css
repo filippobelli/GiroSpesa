@@ -159,3 +159,22 @@
 
 /* Installed app: no pull-to-refresh / rubber-band on the page itself. */
 html,body{overscroll-behavior-y:none}
+
+/* Product picker, delete buttons */
+.picker-modal{display:flex;flex-direction:column;max-height:86vh;max-height:86dvh}
+.picker-search{width:100%;height:44px;margin-bottom:10px;flex:none}
+.picker-search input{font-size:16px}
+.picker-list{flex:1;min-height:120px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
+.picker-row{width:100%;min-height:52px;display:flex;align-items:center;gap:11px;padding:8px 12px;border:0;border-bottom:1px solid #f0f1ee;background:#fff;text-align:left;-webkit-tap-highlight-color:transparent}
+.picker-row:last-child{border-bottom:0}
+.picker-row.picked{background:#f3f8f4}
+.picker-name{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.picker-name b{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker-name small{font-size:11px;color:#9ba097}
+.picker-mark{width:28px;height:28px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:15px;border:1.4px solid #cdd3ca;color:#6f8a76}
+.picked .picker-mark{background:#73a082;border-color:#73a082;color:#fff}
+.picker-empty{padding:18px;text-align:center;color:#92988f;font-size:13px;margin:0}
+.picker-modal .modal-actions{flex:none}
+.danger-btn{margin-right:auto;background:#fff;border:1px solid #f0d6d1;color:#a74e42;border-radius:7px;padding:9px 12px;font-size:11px;font-weight:600}
+.danger-btn:disabled{opacity:.45;cursor:not-allowed}
+.empty-add{margin-top:14px}

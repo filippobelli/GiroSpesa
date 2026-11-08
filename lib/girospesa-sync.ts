@@ -277,6 +277,38 @@ export async function switchStoreTrip(client: Client, familyId: string, userId: 
   return { ...data, trip: { id: newList.id, storeId, items: items.map((item) => ({ productId: item.product_id, qty: String(item.quantity), checked: false })) } };
 }
 
+/**
+ * Delete a store. If the active trip is at that store, it first moves to `fallbackStoreId`.
+ * Active lists of the deleted store are archived (the FK would only null their store_id);
+ * its prices and departments go with it by cascade.
+ */
+export async function deleteStore(client: Client, familyId: string, userId: string, data: Data, storeId: string, fallbackStoreId: string): Promise<Data> {
+  let next = data;
+  if (data.trip?.storeId === storeId) next = await switchStoreTrip(client, familyId, userId, data, fallbackStoreId);
+
+  const { error: archiveError } = await client
+    .from('shopping_lists')
+    .update({ status: 'archived' })
+    .eq('family_id', familyId)
+    .eq('store_id', storeId)
+    .eq('status', 'active');
+  throwIfError(archiveError);
+
+  const { error } = await client.from('stores').delete().eq('family_id', familyId).eq('id', storeId);
+  throwIfError(error);
+
+  return {
+    ...next,
+    stores: next.stores.filter((store) => store.id !== storeId),
+    products: next.products.map((product) => {
+      if (!(storeId in product.prices)) return product;
+      const prices = { ...product.prices };
+      delete prices[storeId];
+      return { ...product, prices };
+    }),
+  };
+}
+
 export async function startFreshTrip(client: Client, familyId: string, userId: string, data: Data, storeId: string): Promise<Data> {
   const { data: existing, error: existingError } = await client
     .from('shopping_lists')
