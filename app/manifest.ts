@@ -7,7 +7,10 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'GiroSpesa',
     description: 'La lista di casa che conosce il percorso del tuo supermercato.',
     start_url: '/',
+    scope: '/',
+    lang: 'it',
     display: 'standalone',
+    orientation: 'portrait',
     background_color: '#fafbf9',
     theme_color: '#527e65',
     icons: [

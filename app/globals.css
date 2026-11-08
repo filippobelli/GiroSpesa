@@ -156,3 +156,6 @@
  .auth-signout{min-height:44px;font-size:14px}
 }
 @media(max-width:400px){.price{display:none}.item{gap:10px;padding-left:12px}}
+
+/* Installed app: no pull-to-refresh / rubber-band on the page itself. */
+html,body{overscroll-behavior-y:none}
