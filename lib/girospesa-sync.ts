@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { DEFAULT_ORDER } from './departments';
 
 export type Product = {
   id: string;
@@ -18,7 +19,7 @@ export type Data = { products: Product[]; stores: Store[]; trip: Trip | null };
 
 type Client = SupabaseClient;
 
-const DEFAULT_DEPARTMENTS = ['Ortofrutta', 'Panetteria', 'Freschi', 'Pesce', 'Dispensa', 'Casa', 'Igiene', 'Bevande', 'Surgelati', 'Altro'];
+const DEFAULT_DEPARTMENTS = DEFAULT_ORDER;
 
 function throwIfError(error: { message?: string } | null) {
   if (error) throw new Error(error.message || 'Errore durante la sincronizzazione.');

@@ -59,12 +59,29 @@ const RULES: [string, RegExp][] = [
   ['Dispensa', /pasta|spaghett|penne|fusilli|lasagn|riso|farin|zuccher|\bsale\b|olio|caffe|cacao|nutella|crema|marmellat|confettur|miele|lenticch|fagiol|ceci|pisell|farro|maionese|senape|ketchup|soia|lievito|amido|fecola|zafferano|spezie|pepe|origano|olive|cracker|taralli|tarallin|gallett|cereal|muesli|avena|semi|\bnoci\b|anacard|mandorl|nocciol|pistacch|datteri|prugne|uvetta|lupini|cioccolat|caramell|merendin|sciropp|cocco|bicarbonato|zuccherini|codette|ringo|fette biscottate|brodo|dado|legumi|tisan|camomill/],
 ];
 
+const DISPENSA_RULES: [string, RegExp][] = [
+  ['Altro', /farin|salsa|fecola|amido/],
+  ['Pesce', /tonno|sgombr|acciug|sardin|alici|salmone affumicato|filetti di/],
+  ['Legumi', /lenticch|fagiol|\bceci\b|pisell|lupini|legumi|\bfave\b|edamame|cicerchi/],
+  ['Pane', /pangrattato|cracker|taralli|tarallin|gallett|grissin|fette biscottate|wasa|frisell|crostin|pancarre|pan carre|piadin|pane/],
+  ['Dolci', /biscott|zuccher|cacao|nutella|crema (di )?(nocciol|anacard|pistacch|spalmabil|mandorl)|marmellat|confettur|miele|merendin|cioccolat|caramell|codette|ringo|pan di stelle|sciropp|gocce|lievito dolci|lievito per dolci|muesli|cereal|soffiat|budin|\bdolci\b|dolcific|wafer|torta|savoiardi|canditi|vanigl|zuccherini/],
+];
+
 function normalize(name: string) {
   return name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
 }
 
+/** Subcategory of a pantry product: Dolci, Pane, Pesce, Legumi or Altro. */
+export function dispensaSub(name: string): string {
+  const n = normalize(name);
+  for (const [sub, pattern] of DISPENSA_RULES) if (pattern.test(n)) return sub;
+  return 'Altro';
+}
+
 export function categorize(name: string): string {
   const n = normalize(name);
-  for (const [category, pattern] of RULES) if (pattern.test(n)) return category;
+  for (const [category, pattern] of RULES) {
+    if (pattern.test(n)) return category === 'Dispensa' ? `Dispensa · ${dispensaSub(name)}` : category;
+  }
   return 'Altro';
 }
