@@ -13,7 +13,7 @@ const seed: Data = { products: [
   {id:'p7',name:'Yogurt greco',category:'Freschi',emoji:'🥣',qty:'2',note:'',barcode:'',prices:{s1:1.49,s2:1.39}},
   {id:'p8',name:'Banane',category:'Ortofrutta',emoji:'🍌',qty:'1',note:'',barcode:'',prices:{s1:1.79}}
 ], stores:[{id:'s1',name:'Esselunga',color:'#397861',order:['Ortofrutta','Panetteria','Freschi','Dispensa','Casa']},{id:'s2',name:'Lidl',color:'#496bc1',order:['Panetteria','Ortofrutta','Dispensa','Freschi','Casa']}], trip:{storeId:'s1',items:[{productId:'p1',qty:'2 × 1 L',checked:false},{productId:'p2',qty:'500 g',checked:false},{productId:'p3',qty:'2 × 500 g',checked:true},{productId:'p4',qty:'6',checked:false},{productId:'p5',qty:'1',checked:false},{productId:'p6',qty:'1',checked:false},{productId:'p7',qty:'2',checked:false},{productId:'p8',qty:'1 grappolo',checked:false}]} };
-const icons: Record<string,string> = {Ortofrutta:'🥬',Panetteria:'🥖',Freschi:'🧀',Pesce:'🐟',Dispensa:'🫙',Casa:'🧹',Bevande:'🥤',Surgelati:'🧊',Altro:'🛒'};
+const icons: Record<string,string> = {Ortofrutta:'🥬',Panetteria:'🥖',Freschi:'🧀',Pesce:'🐟',Dispensa:'🫙',Casa:'🧹',Igiene:'🧴',Bevande:'🥤',Surgelati:'🧊',Altro:'🛒'};
 const STORAGE_KEY='girospesa-v2';
 const CACHE_KEY='girospesa-offline-v1';
 type OfflineCache={familyId:string;familyName:string;userId:string;userEmail:string;data:Data;base:Data};
