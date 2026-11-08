@@ -201,3 +201,5 @@ html,body{overscroll-behavior-y:none}
 .catalog-stepper span{min-width:24px}
 .finish-text{margin:0 0 12px;font-size:14px;line-height:1.55;color:#4f564d}
 @media(max-width:780px){.catalog-group{margin-bottom:18px}}
+.dept-edit{flex:none;border:0;background:#f0f3ef;color:#7b8378;border-radius:7px;width:30px;height:26px;font-size:14px;letter-spacing:1px;margin-left:6px}
+@media(max-width:780px){.dept-edit{width:40px;height:34px;font-size:16px}}

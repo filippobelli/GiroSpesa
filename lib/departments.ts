@@ -65,6 +65,49 @@ export function flatDepartments(data: Data): string[] {
 /** Label for a department inside its parent's group. */
 export function shortLabel(cat: string) { return subOf(cat) || `${cat} (generico)`; }
 
+/** The ten built-in departments are the fixed skeleton: subcategories and custom ones are editable. */
+export function isEditableDept(cat: string) { return !(cat in MAIN_ICONS); }
+
+/** Tidy a user-typed department name: no separator inside, single spaces, capitalised. */
+export function cleanDeptName(raw: string) {
+  const name = raw.replace(/·/g, '-').replace(/\s+/g, ' ').trim();
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : '';
+}
+
+function mapCat(c: string, from: string, to: string) {
+  if (c === from) return to;
+  return c.startsWith(from + SEP) ? to + c.slice(from.length) : c;
+}
+
+/** Rename a department everywhere (its subcategories follow when it is a parent). */
+export function renameDeptIn(data: Data, from: string, to: string): Data {
+  return {
+    ...data,
+    products: data.products.map((p) => { const category = mapCat(p.category, from, to); return category === p.category ? p : { ...p, category }; }),
+    stores: data.stores.map((s) => ({ ...s, order: s.order.map((c) => mapCat(c, from, to)) })),
+  };
+}
+
+/** Delete a department: its products move to `target`, routes drop it. */
+export function deleteDeptIn(data: Data, cat: string, target: string): Data {
+  const moving = data.products.some((p) => p.category === cat);
+  return {
+    ...data,
+    products: data.products.map((p) => (p.category === cat ? { ...p, category: target } : p)),
+    stores: data.stores.map((s) => {
+      const order = s.order.filter((c) => c !== cat);
+      return { ...s, order: moving && target ? insertDept(order, target) : order };
+    }),
+  };
+}
+
+/** Best place for the products of a department being deleted. */
+export function defaultMoveTarget(cat: string, options: string[]) {
+  const parent = parentOf(cat);
+  const candidates = [`${parent}${SEP}Altro`, parent, 'Altro'];
+  return candidates.find((c) => c !== cat && options.includes(c)) ?? options.find((c) => c !== cat) ?? '';
+}
+
 /**
  * One-time split of plain "Dispensa": products get a subcategory, routes get the five
  * subcategories in the place where "Dispensa" was. Returns the same object if nothing to do.
