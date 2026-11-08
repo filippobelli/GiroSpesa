@@ -44,7 +44,8 @@ export type DeptGroup = { parent: string; options: string[] };
 export function departmentGroups(data: Data): DeptGroup[] {
   const all: string[] = [];
   const add = (c: string) => { if (c && !all.includes(c)) all.push(c); };
-  Object.keys(MAIN_ICONS).forEach(add);
+  // Saved routes are the source of truth; the built-in list only seeds a family with no store yet.
+  if (!data.stores.length) DEFAULT_ORDER.forEach(add);
   data.stores.forEach((s) => s.order.forEach(add));
   data.products.forEach((p) => add(p.category));
   const used = new Set<string>([...data.stores.flatMap((s) => s.order), ...data.products.map((p) => p.category)]);
@@ -65,8 +66,23 @@ export function flatDepartments(data: Data): string[] {
 /** Label for a department inside its parent's group. */
 export function shortLabel(cat: string) { return subOf(cat) || `${cat} (generico)`; }
 
-/** The ten built-in departments are the fixed skeleton: subcategories and custom ones are editable. */
-export function isEditableDept(cat: string) { return !(cat in MAIN_ICONS); }
+/**
+ * One-time fill: add the built-in departments a route is missing (older stores were created
+ * with a shorter list). After this the family manages its departments freely.
+ */
+export function ensureMainDepartments(data: Data): Data {
+  let changed = false;
+  const stores = data.stores.map((s) => {
+    let order = s.order;
+    for (const main of Object.keys(MAIN_ICONS)) {
+      if (order.some((c) => parentOf(c) === main)) continue;
+      for (const c of main === 'Dispensa' ? DISPENSA_SUBS : [main]) order = insertDept(order, c);
+    }
+    if (order !== s.order) changed = true;
+    return order === s.order ? s : { ...s, order };
+  });
+  return changed ? { ...data, stores } : data;
+}
 
 /** Tidy a user-typed department name: no separator inside, single spaces, capitalised. */
 export function cleanDeptName(raw: string) {
