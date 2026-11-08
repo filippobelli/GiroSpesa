@@ -193,3 +193,11 @@ html,body{overscroll-behavior-y:none}
 .import-remove{flex:none;width:30px;height:30px;border:0;border-radius:50%;background:#f4f6f2;color:#8a9087;font-size:17px}
 .import-check{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:13px;color:#4f564d;flex:none}
 .import-check input{width:18px;height:18px;accent-color:#527e65}
+
+/* Catalog grouped by department, card stepper, finish dialog */
+.catalog-group{margin-bottom:22px}
+.catalog-group .aisle-head{margin-bottom:8px}
+.catalog-bottom>.qty-stepper{grid-area:a;margin-left:auto}
+.catalog-stepper span{min-width:24px}
+.finish-text{margin:0 0 12px;font-size:14px;line-height:1.55;color:#4f564d}
+@media(max-width:780px){.catalog-group{margin-bottom:18px}}
