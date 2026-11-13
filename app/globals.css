@@ -267,3 +267,18 @@ html,body{overscroll-behavior-y:none}
 .store-page-heading { justify-content: flex-end; }
 .store-page-heading .heading-actions { flex-wrap: nowrap; align-items: stretch; }
 .store-page-heading .heading-actions button { min-height: 44px; }
+
+.trip-store-select { min-width: 0; margin-bottom: 4px; }
+.trip-store-select select { max-width: 100%; }
+.page-heading .trip-list-title { font-size: .9em; font-size: clamp(21px, 2.4vw, 31px); }
+.trip-add-actions .primary-btn { height: auto; min-height: 40px; padding-block: 7px; }
+@media (max-width: 780px) {
+  .trip-bar.trip-summary { display: none; }
+  .aisles .item { min-height: 64px; padding-block: 7px; }
+  .trip-picker-backdrop {
+    inset: var(--picker-top, 0px) 0 auto;
+    height: var(--picker-height, 100dvh);
+  }
+  .trip-picker-backdrop .modal { max-height: 100%; }
+  .trip-picker-backdrop .picker-list { min-height: 80px; }
+}
