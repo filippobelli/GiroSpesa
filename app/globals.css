@@ -215,3 +215,21 @@ html,body{overscroll-behavior-y:none}
  .item>.price{min-width:0;flex:none}
  .item>.price.no-price{display:none}
 }
+
+/* List selection after sign-in */
+.list-choice {
+  width: min(100%, 460px);
+  min-height: 100dvh;
+  margin: auto;
+  padding: 22px 18px max(22px, env(safe-area-inset-bottom));
+}
+.list-choice header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.list-choice header .brand { margin: 0; }
+.list-choice h1 { margin: 24px 0 8px; font-size: 30px; }
+.list-choice p { margin: 0 0 16px; }
+.list-choice-options { display: grid; gap: 8px; }
+.list-choice-options button { display: grid; gap: 5px; text-align: left; padding: 13px 14px; border: 1px solid #cedbd0; border-radius: 12px; background: white; color: #244e38; overflow-wrap: anywhere; }
+.list-choice-options .list-choice-general { background: #e2efe3; }
+.list-choice-options small { color: #52645a; }
+.list-choice form { display: flex; gap: 8px; margin: 14px 0; }
+.list-choice input { flex: 1; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid #b9cbbd; border-radius: 10px; font-size: 16px; }

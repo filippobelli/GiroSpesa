@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { DEFAULT_ORDER } from './departments';
+import { chooseList, GENERAL, type ShoppingList } from './shopping-lists';
 
 export type Product = {
   id: string;
@@ -15,7 +16,7 @@ export type Product = {
 export type Store = { id: string; name: string; color: string; order: string[] };
 export type TripItem = { productId: string; qty: string; checked: boolean };
 export type Trip = { id?: string; storeId: string; items: TripItem[] };
-export type Data = { products: Product[]; stores: Store[]; trip: Trip | null };
+export type Data = { products: Product[]; stores: Store[]; trip: Trip | null; lists?: ShoppingList[] };
 
 type Client = SupabaseClient;
 
@@ -47,7 +48,7 @@ export async function getFamilyName(client: Client, familyId: string) {
   return data.name as string;
 }
 
-export async function loadFamilyData(client: Client, familyId: string, selectedStoreId?: string): Promise<Data> {
+export async function loadFamilyData(client: Client, familyId: string, selectedStoreId?: string, selectedListId?: string): Promise<Data> {
   const [productsResult, storesResult, departmentsResult, pricesResult] = await Promise.all([
     client.from('products').select('id,name,category,emoji,usual_quantity,note,barcode').eq('family_id', familyId).order('name'),
     client.from('stores').select('id,name,color').eq('family_id', familyId).order('created_at'),
@@ -88,54 +89,56 @@ export async function loadFamilyData(client: Client, familyId: string, selectedS
     prices: pricesByProduct[product.id] ?? {},
   }));
 
-  if (!stores.length) return { products, stores, trip: null };
+  const { error: generalError } = await client.from('shopping_lists').upsert(
+    { id: familyId, family_id: familyId, name: GENERAL },
+    { onConflict: 'id', ignoreDuplicates: true },
+  );
+  throwIfError(generalError);
 
-  let listQuery = client.from('shopping_lists').select('id,store_id').eq('family_id', familyId).eq('status', 'active');
-  if (selectedStoreId) listQuery = listQuery.eq('store_id', selectedStoreId);
-  const { data: list, error: listError } = await listQuery.order('created_at', { ascending: false }).limit(1).maybeSingle();
-  throwIfError(listError);
+  const [listsResult, itemsResult] = await Promise.all([
+    client.from('shopping_lists').select('id,name,store_id').eq('family_id', familyId).eq('status', 'active').order('created_at'),
+    loadListItems(client, familyId),
+  ]);
+  throwIfError(listsResult.error);
 
-  if (!list) {
-    const storeId = selectedStoreId && stores.some((store) => store.id === selectedStoreId) ? selectedStoreId : stores[0].id;
-    const { data: newList, error: createError } = await client
-      .from('shopping_lists')
-      .insert({ family_id: familyId, store_id: storeId, name: 'Spesa', status: 'active' })
-      .select('id,store_id')
-      .single();
-    throwIfError(createError);
-    if (!newList) throw new Error('Non riesco a creare la lista.');
-    const newItems = products.map((product, position) => ({
-      family_id: familyId,
-      shopping_list_id: newList.id,
-      product_id: product.id,
-      quantity: safeQuantity(product.qty),
-      checked: false,
-      position,
-    }));
-    if (newItems.length) {
-      const { error } = await client.from('shopping_list_items').insert(newItems);
-      throwIfError(error);
+  const lists: ShoppingList[] = (listsResult.data ?? []).map(list => ({
+    id: list.id,
+    name: list.id === familyId ? GENERAL : (list.name === 'Spesa' && list.store_id
+      ? stores.find(store => store.id === list.store_id)?.name ?? list.name
+      : list.name),
+    legacyStoreId: list.store_id ?? undefined,
+    items: itemsResult.get(list.id) ?? [],
+  }));
+  lists.sort((a, b) => Number(b.id === familyId) - Number(a.id === familyId));
+  const data = { products, stores, lists, trip: null };
+  return selectedListId ? chooseList(data, selectedListId, familyId, selectedStoreId) : data;
+}
+
+async function loadListItems(client: Client, familyId: string) {
+  const byList = new Map<string, TripItem[]>();
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from('shopping_list_items')
+      .select('id,shopping_list_id,product_id,quantity,checked,shopping_lists!inner(status)')
+      .eq('family_id', familyId).eq('shopping_lists.status', 'active')
+      .order('position').order('id').range(offset, offset + pageSize - 1);
+    throwIfError(error);
+    for (const item of data ?? []) {
+      const items = byList.get(item.shopping_list_id) ?? [];
+      items.push({ productId: item.product_id, qty: String(item.quantity), checked: item.checked });
+      byList.set(item.shopping_list_id, items);
     }
-    return { products, stores, trip: { id: newList.id, storeId, items: newItems.map((item) => ({ productId: item.product_id, qty: String(item.quantity), checked: false })) } };
+    if ((data?.length ?? 0) < pageSize) return byList;
   }
+}
 
-  const { data: items, error: itemsError } = await client
-    .from('shopping_list_items')
-    .select('product_id,quantity,checked')
-    .eq('family_id', familyId)
-    .eq('shopping_list_id', list.id)
-    .order('position');
-  throwIfError(itemsError);
-
-  return {
-    products,
-    stores,
-    trip: {
-      id: list.id,
-      storeId: list.store_id,
-      items: (items ?? []).map((item) => ({ productId: item.product_id, qty: String(item.quantity), checked: item.checked })),
-    },
-  };
+export async function namedListId(familyId: string, name: string) {
+  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256',
+    new TextEncoder().encode(familyId + ':' + name.toLocaleLowerCase('it'))));
+  bytes[6] = (bytes[6] & 15) | 128;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes.slice(0, 16), byte => byte.toString(16).padStart(2, '0')).join('');
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-');
 }
 
 /** Import the current browser list once when its new family has no catalog yet. */
@@ -230,121 +233,21 @@ export async function importLocalData(client: Client, familyId: string, userId: 
     throwIfError(itemError);
   }
 
-  return data;
+  return loadFamilyData(client, familyId);
 }
 
-export async function switchStoreTrip(client: Client, familyId: string, userId: string, data: Data, storeId: string): Promise<Data> {
-  const { data: list, error } = await client
-    .from('shopping_lists')
-    .select('id')
-    .eq('family_id', familyId)
-    .eq('store_id', storeId)
-    .eq('status', 'active')
-    .limit(1)
-    .maybeSingle();
-  throwIfError(error);
-
-  if (list) {
-    const { data: items, error: itemsError } = await client
-      .from('shopping_list_items')
-      .select('product_id,quantity,checked')
-      .eq('family_id', familyId)
-      .eq('shopping_list_id', list.id)
-      .order('position');
-    throwIfError(itemsError);
-    return { ...data, trip: { id: list.id, storeId, items: (items ?? []).map((item) => ({ productId: item.product_id, qty: String(item.quantity), checked: item.checked })) } };
+export async function deleteStore(client: Client, familyId: string, data: Data, storeId: string, fallbackStoreId: string): Promise<Data> {
+  // Give legacy lists an explicit name before the foreign key clears the store.
+  for (const list of data.lists ?? []) {
+    if (list.legacyStoreId !== storeId) continue;
+    const { error } = await client.from('shopping_lists').update({ name: list.name, store_id: null })
+      .eq('family_id', familyId).eq('id', list.id);
+    throwIfError(error);
   }
-
-  const { data: newList, error: createError } = await client
-    .from('shopping_lists')
-    .insert({ family_id: familyId, store_id: storeId, name: 'Spesa', status: 'active', created_by: userId })
-    .select('id')
-    .single();
-  throwIfError(createError);
-  if (!newList) throw new Error('Non riesco a creare la lista del negozio.');
-  const items = data.products.map((product, position) => ({
-    family_id: familyId,
-    shopping_list_id: newList.id,
-    product_id: product.id,
-    quantity: safeQuantity(product.qty),
-    checked: false,
-    position,
-    added_by: userId,
-  }));
-  if (items.length) {
-    const { error: itemError } = await client.from('shopping_list_items').insert(items);
-    throwIfError(itemError);
-  }
-  return { ...data, trip: { id: newList.id, storeId, items: items.map((item) => ({ productId: item.product_id, qty: String(item.quantity), checked: false })) } };
-}
-
-/**
- * Delete a store. If the active trip is at that store, it first moves to `fallbackStoreId`.
- * Active lists of the deleted store are archived (the FK would only null their store_id);
- * its prices and departments go with it by cascade.
- */
-export async function deleteStore(client: Client, familyId: string, userId: string, data: Data, storeId: string, fallbackStoreId: string): Promise<Data> {
-  let next = data;
-  if (data.trip?.storeId === storeId) next = await switchStoreTrip(client, familyId, userId, data, fallbackStoreId);
-
-  const { error: archiveError } = await client
-    .from('shopping_lists')
-    .update({ status: 'archived' })
-    .eq('family_id', familyId)
-    .eq('store_id', storeId)
-    .eq('status', 'active');
-  throwIfError(archiveError);
 
   const { error } = await client.from('stores').delete().eq('family_id', familyId).eq('id', storeId);
   throwIfError(error);
-
-  return {
-    ...next,
-    stores: next.stores.filter((store) => store.id !== storeId),
-    products: next.products.map((product) => {
-      if (!(storeId in product.prices)) return product;
-      const prices = { ...product.prices };
-      delete prices[storeId];
-      return { ...product, prices };
-    }),
-  };
-}
-
-export async function startFreshTrip(client: Client, familyId: string, userId: string, data: Data, storeId: string): Promise<Data> {
-  const { data: existing, error: existingError } = await client
-    .from('shopping_lists')
-    .select('id')
-    .eq('family_id', familyId)
-    .eq('store_id', storeId)
-    .eq('status', 'active')
-    .limit(1)
-    .maybeSingle();
-  throwIfError(existingError);
-  if (existing) {
-    const { error } = await client.from('shopping_lists').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', existing.id).eq('family_id', familyId);
-    throwIfError(error);
-  }
-  const { data: list, error } = await client
-    .from('shopping_lists')
-    .insert({ family_id: familyId, store_id: storeId, name: 'Spesa', status: 'active', created_by: userId })
-    .select('id')
-    .single();
-  throwIfError(error);
-  if (!list) throw new Error('Non riesco ad avviare una nuova spesa.');
-  const items = data.products.map((product, position) => ({
-    family_id: familyId,
-    shopping_list_id: list.id,
-    product_id: product.id,
-    quantity: safeQuantity(product.qty),
-    checked: false,
-    position,
-    added_by: userId,
-  }));
-  if (items.length) {
-    const { error: itemError } = await client.from('shopping_list_items').insert(items);
-    throwIfError(itemError);
-  }
-  return { ...data, trip: { id: list.id, storeId, items: items.map((item) => ({ productId: item.product_id, qty: String(item.quantity), checked: false })) } };
+  return loadFamilyData(client, familyId, data.trip?.storeId === storeId ? fallbackStoreId : data.trip?.storeId, data.trip?.id);
 }
 
 export async function persistDataChanges(client: Client, familyId: string, userId: string, previous: Data, next: Data) {
@@ -408,42 +311,61 @@ export async function persistDataChanges(client: Client, familyId: string, userI
     throwIfError(error);
   }
 
-  if (previous.trip?.id && previous.trip.id !== next.trip?.id && !nextStores.has(previous.trip.storeId)) {
-    const { error } = await client.from('stores').delete().eq('family_id', familyId).eq('id', previous.trip.storeId);
+  if (next.lists) {
+    await persistNamedLists(client, familyId, userId, previous.lists ?? [], next.lists);
+  } else if (next.trip?.id && previous.trip?.id === next.trip.id) {
+    // Replay pending edits saved by the previous version before loading the new lists.
+    await persistListItems(client, familyId, userId, next.trip.id, previous.trip.items, next.trip.items);
+  }
+}
+
+async function persistNamedLists(client: Client, familyId: string, userId: string, previous: ShoppingList[], next: ShoppingList[]) {
+  const previousById = new Map(previous.map(list => [list.id, list]));
+  const newLists = next.filter(list => !previousById.has(list.id));
+  if (newLists.length) {
+    const { error } = await client.from('shopping_lists').upsert(newLists.map(list => ({
+      id: list.id, family_id: familyId, name: list.name, created_by: userId,
+    })), { onConflict: 'id', ignoreDuplicates: true });
     throwIfError(error);
   }
 
-  if (!next.trip?.id) return;
-  if (JSON.stringify(previous.trip) !== JSON.stringify(next.trip)) {
-    const { error } = await client.from('shopping_lists').upsert({
-      id: next.trip.id,
-      family_id: familyId,
-      store_id: next.trip.storeId,
-      name: 'Spesa',
-      status: 'active',
-      created_by: userId,
-    });
+  const removed = next.flatMap(list => {
+    const remaining = new Set(list.items.map(item => item.productId));
+    return (previousById.get(list.id)?.items ?? [])
+      .filter(item => !remaining.has(item.productId))
+      .map(item => ({ listId: list.id, productId: item.productId }));
+  });
+  for (let offset = 0; offset < removed.length; offset += 40) {
+    const filters = removed.slice(offset, offset + 40).map(({ listId, productId }) =>
+      'and(shopping_list_id.eq.' + listId + ',product_id.eq.' + productId + ')');
+    const { error } = await client.from('shopping_list_items').delete()
+      .eq('family_id', familyId).or(filters.join(','));
     throwIfError(error);
+  }
+  for (const list of next) {
+    await persistListItems(client, familyId, userId, list.id, previousById.get(list.id)?.items ?? [], list.items, false);
+  }
+}
 
-    const oldItems = new Map((previous.trip?.id === next.trip.id ? previous.trip.items : []).map((item) => [item.productId, item]));
-    const newItems = new Map(next.trip.items.map((item) => [item.productId, item]));
-    const removedItems = [...oldItems.keys()].filter((productId) => !newItems.has(productId));
-    if (removedItems.length) {
-      const { error: deleteError } = await client.from('shopping_list_items').delete().eq('family_id', familyId).eq('shopping_list_id', next.trip.id).in('product_id', removedItems);
-      throwIfError(deleteError);
-    }
-    const changedItems = next.trip.items.filter((item) => JSON.stringify(oldItems.get(item.productId)) !== JSON.stringify(item));
-    if (changedItems.length) {
-      const { error: itemError } = await client.from('shopping_list_items').upsert(changedItems.map((item) => ({
-        family_id: familyId,
-        shopping_list_id: next.trip!.id,
-        product_id: item.productId,
-        quantity: safeQuantity(item.qty),
-        checked: item.checked,
-        position: next.trip!.items.findIndex((candidate) => candidate.productId === item.productId),
-        added_by: userId,
-      })), { onConflict: 'shopping_list_id,product_id' });
-      throwIfError(itemError);
-    }
+async function persistListItems(client: Client, familyId: string, userId: string, listId: string, previous: TripItem[], next: TripItem[], deleteMissing = true) {
+  const previousById = new Map(previous.map(item => [item.productId, item]));
+  const nextIds = new Set(next.map(item => item.productId));
+  const removed = previous.filter(item => !nextIds.has(item.productId)).map(item => item.productId);
+  if (deleteMissing && removed.length) {
+    const { error } = await client.from('shopping_list_items').delete()
+      .eq('family_id', familyId).eq('shopping_list_id', listId).in('product_id', removed);
+    throwIfError(error);
+  }
+  const changed = next.flatMap((item, position) => {
+    const old = previousById.get(item.productId);
+    if (old?.qty === item.qty && old.checked === item.checked) return [];
+    return [{
+      family_id: familyId, shopping_list_id: listId, product_id: item.productId,
+      quantity: safeQuantity(item.qty), checked: item.checked, position, added_by: userId,
+    }];
+  });
+  if (changed.length) {
+    const { error } = await client.from('shopping_list_items').upsert(changed, { onConflict: 'shopping_list_id,product_id' });
+    throwIfError(error);
   }
 }
