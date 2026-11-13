@@ -32,13 +32,22 @@ export function recordPurchase(data: Data, id: string): Data {
 
 export type Period = 'week' | 'month' | 'year';
 
-const italianDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' });
+const italianDate = new Intl.DateTimeFormat('it-IT', {
+  timeZone: 'Europe/Rome', calendar: 'gregory', numberingSystem: 'latn',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+});
 const shortDate = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 const monthDate = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
 
+function purchaseDay(date: Date) {
+  const parts = italianDate.formatToParts(date);
+  const get = (type: 'year' | 'month' | 'day') => parts.find(part => part.type === type)?.value ?? '';
+  return [get('year'), get('month'), get('day')].join('-');
+}
+
 export function reportPeriod(period: Period, offset: number, now = new Date()) {
-  const [year, month, day] = italianDate.format(now).split('-').map(Number);
+  const [year, month, day] = purchaseDay(now).split('-').map(Number);
   const utc = (y: number, m: number, d: number) => new Date(Date.UTC(y, m, d));
   if (period === 'year') return { start: dayKey(utc(year + offset, 0, 1)), end: dayKey(utc(year + offset + 1, 0, 1)), label: String(year + offset) };
   if (period === 'month') {
@@ -54,7 +63,9 @@ export function reportPeriod(period: Period, offset: number, now = new Date()) {
 export function summarizePurchases(purchases: Purchase[], start: string, end: string) {
   const totals = new Map<string, { id: string; name: string; qty: number; priced: number; cents: number }>();
   for (const purchase of purchases) {
-    const day = italianDate.format(new Date(purchase.date));
+    const date = new Date(purchase.date);
+    if (!Number.isFinite(date.getTime())) continue;
+    const day = purchaseDay(date);
     if (day < start || day >= end) continue;
     const row = totals.get(purchase.productId) ?? { id: purchase.productId, name: purchase.name, qty: 0, priced: 0, cents: 0 };
     row.qty += purchase.quantity;
