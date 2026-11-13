@@ -87,6 +87,7 @@
  .aisle{margin-bottom:18px}
  .aisle-head{gap:10px;margin-bottom:8px}
  .aisle-icon{width:32px;height:32px;font-size:18px;border-radius:9px}
+ .aisles .aisle-head h2{font-size:16px}
  .aisle-head h2{font-size:18px}
  .aisle-count{font-size:14px;color:#80867c}
  .items{border-radius:14px}
@@ -94,7 +95,7 @@
  .check{width:28px;height:28px;border-radius:8px;border-width:2px;font-size:17px}
  .product-emoji{font-size:24px;width:28px;flex:none}
  .item-name{flex:1}
- .item-name b{font-size:17px;line-height:1.25}
+ .item-name b{font-size:15px;line-height:1.25}
  .item-name small{font-size:14px}
  .qty-stepper button{width:40px;height:40px;font-size:21px;border-radius:10px}
  .qty-stepper span{min-width:26px;font-size:17px}
@@ -208,7 +209,7 @@ html,body{overscroll-behavior-y:none}
 @media(max-width:780px){
  .item{gap:10px;padding:8px 10px 8px 14px}
  .item-name{flex:1;min-width:0}
- .item-name b{font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+ .item-name b{font-size:15px;line-height:1.25;overflow-wrap:anywhere}
  .item>.qty-stepper{margin-left:0;flex:none}
  .item>.qty-stepper button{width:36px;height:36px;font-size:19px}
  .item>.qty-stepper span{min-width:22px}
