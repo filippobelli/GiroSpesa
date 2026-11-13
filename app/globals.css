@@ -254,11 +254,14 @@ html,body{overscroll-behavior-y:none}
 .store-card-chevron { flex: none; font-size: 20px; }
 .store-card-toggle[aria-expanded="true"] .store-card-chevron { transform: rotate(180deg); }
 
-.trip-add-actions {
+.page-heading.trip-heading { display: block; }
+.trip-heading-row {
   display: flex;
-  justify-content: flex-end;
-  margin: 12px 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
+.trip-heading-row .trip-list-title { min-width: 0; }
 .progress-row[hidden] { display: none; }
 @media (max-width: 780px) {
   .progress-row { display: none; }
@@ -275,7 +278,7 @@ html,body{overscroll-behavior-y:none}
   .topbar-store-select select { font-size: 16px; }
 }
 .page-heading .trip-list-title { font-size: .9em; font-size: clamp(21px, 2.4vw, 31px); }
-.trip-add-actions .primary-btn { height: auto; min-height: 40px; padding-block: 7px; }
+.trip-heading-row .primary-btn { flex: none; height: auto; min-height: 40px; margin: 0; padding-block: 7px; }
 @media (max-width: 780px) {
   .trip-bar.trip-summary { display: none; }
   .aisles .item { min-height: 62px; padding-block: 6px; }
