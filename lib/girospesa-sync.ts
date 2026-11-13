@@ -22,6 +22,13 @@ type Client = SupabaseClient;
 
 const DEFAULT_DEPARTMENTS = DEFAULT_ORDER;
 
+// The legacy store_id column permits only one active list per store.
+const storedStore = /\n@store:([0-9a-f-]{36})$/i;
+
+function storedListName(list: ShoppingList) {
+  return list.storeId ? list.name + '\n@store:' + list.storeId : list.name;
+}
+
 function throwIfError(error: { message?: string } | null) {
   if (error) throw new Error(error.message || 'Errore durante la sincronizzazione.');
 }
@@ -48,7 +55,7 @@ export async function getFamilyName(client: Client, familyId: string) {
   return data.name as string;
 }
 
-export async function loadFamilyData(client: Client, familyId: string, selectedStoreId?: string, selectedListId?: string): Promise<Data> {
+export async function loadFamilyData(client: Client, familyId: string, selectedListId?: string): Promise<Data> {
   const [productsResult, storesResult, departmentsResult, pricesResult] = await Promise.all([
     client.from('products').select('id,name,category,emoji,usual_quantity,note,barcode').eq('family_id', familyId).order('name'),
     client.from('stores').select('id,name,color').eq('family_id', familyId).order('created_at'),
@@ -101,17 +108,22 @@ export async function loadFamilyData(client: Client, familyId: string, selectedS
   ]);
   throwIfError(listsResult.error);
 
-  const lists: ShoppingList[] = (listsResult.data ?? []).map(list => ({
-    id: list.id,
-    name: list.id === familyId ? GENERAL : (list.name === 'Spesa' && list.store_id
-      ? stores.find(store => store.id === list.store_id)?.name ?? list.name
-      : list.name),
-    legacyStoreId: list.store_id ?? undefined,
-    items: itemsResult.get(list.id) ?? [],
-  }));
+  const lists: ShoppingList[] = (listsResult.data ?? []).map(list => {
+    const storeId = list.name.match(storedStore)?.[1];
+    const name = list.name.replace(storedStore, '');
+    return {
+      id: list.id,
+      name: list.id === familyId ? GENERAL : (!storeId && name === 'Spesa' && list.store_id
+        ? stores.find(store => store.id === list.store_id)?.name ?? name
+        : name),
+      storeId,
+      legacyStoreId: list.store_id ?? undefined,
+      items: itemsResult.get(list.id) ?? [],
+    };
+  });
   lists.sort((a, b) => Number(b.id === familyId) - Number(a.id === familyId));
   const data = { products, stores, lists, trip: null };
-  return selectedListId ? chooseList(data, selectedListId, familyId, selectedStoreId) : data;
+  return selectedListId ? chooseList(data, selectedListId, familyId) : data;
 }
 
 async function loadListItems(client: Client, familyId: string) {
@@ -239,15 +251,17 @@ export async function importLocalData(client: Client, familyId: string, userId: 
 export async function deleteStore(client: Client, familyId: string, data: Data, storeId: string, fallbackStoreId: string): Promise<Data> {
   // Give legacy lists an explicit name before the foreign key clears the store.
   for (const list of data.lists ?? []) {
-    if (list.legacyStoreId !== storeId) continue;
-    const { error } = await client.from('shopping_lists').update({ name: list.name, store_id: null })
+    if (list.legacyStoreId !== storeId && list.storeId !== storeId) continue;
+    const replacement = list.storeId && list.storeId !== storeId ? list.storeId : fallbackStoreId;
+    const { error } = await client.from('shopping_lists')
+      .update({ name: storedListName({ ...list, storeId: replacement }), store_id: null })
       .eq('family_id', familyId).eq('id', list.id);
     throwIfError(error);
   }
 
   const { error } = await client.from('stores').delete().eq('family_id', familyId).eq('id', storeId);
   throwIfError(error);
-  return loadFamilyData(client, familyId, data.trip?.storeId === storeId ? fallbackStoreId : data.trip?.storeId, data.trip?.id);
+  return loadFamilyData(client, familyId, data.trip?.id);
 }
 
 export async function persistDataChanges(client: Client, familyId: string, userId: string, previous: Data, next: Data) {
@@ -324,8 +338,17 @@ async function persistNamedLists(client: Client, familyId: string, userId: strin
   const newLists = next.filter(list => !previousById.has(list.id));
   if (newLists.length) {
     const { error } = await client.from('shopping_lists').upsert(newLists.map(list => ({
-      id: list.id, family_id: familyId, name: list.name, created_by: userId,
+      id: list.id, family_id: familyId, name: storedListName(list), created_by: userId,
     })), { onConflict: 'id', ignoreDuplicates: true });
+    throwIfError(error);
+  }
+
+  for (const list of next) {
+    const before = previousById.get(list.id);
+    if (!before || before.storeId === list.storeId) continue;
+    const { error } = await client.from('shopping_lists')
+      .update({ name: storedListName(list) })
+      .eq('family_id', familyId).eq('id', list.id).eq('status', 'active');
     throwIfError(error);
   }
 

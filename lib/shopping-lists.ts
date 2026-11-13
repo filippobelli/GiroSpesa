@@ -1,6 +1,6 @@
 import type { Data, TripItem } from './girospesa-sync';
 
-export type ShoppingList = { id: string; name: string; items: TripItem[]; legacyStoreId?: string };
+export type ShoppingList = { id: string; name: string; items: TripItem[]; storeId?: string; legacyStoreId?: string };
 export const GENERAL = 'Generale';
 const quantity = (item: TripItem) => Math.max(1, Number.parseInt(item.qty, 10) || 1);
 
@@ -21,8 +21,15 @@ export function visibleItems(lists: ShoppingList[], listId: string, familyId: st
 export function chooseList(data: Data, listId: string, familyId: string, storeId?: string): Data {
   const list = data.lists?.find(candidate => candidate.id === listId);
   if (!list) return { ...data, trip: null };
-  const chosenStore = storeId ?? list.legacyStoreId ?? data.trip?.storeId ?? data.stores[0]?.id ?? '';
+  const chosenStore = [storeId, list.storeId, list.legacyStoreId]
+    .find(id => data.stores.some(store => store.id === id)) ?? data.stores[0]?.id ?? '';
   return { ...data, trip: { id: listId, storeId: chosenStore, items: visibleItems(data.lists ?? [], listId, familyId) } };
+}
+
+export function assignListStore(data: Data, listId: string, familyId: string, storeId: string): Data {
+  if (!data.stores.some(store => store.id === storeId) || !data.lists) return data;
+  const lists = data.lists.map(list => list.id === listId ? { ...list, storeId } : list);
+  return chooseList({ ...data, lists }, listId, familyId);
 }
 
 /** Translate changes in the selected list into changes to their owning rows. */
