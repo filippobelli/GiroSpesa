@@ -298,3 +298,14 @@ html,body{overscroll-behavior-y:none}
 @media (max-width: 380px) {
   .catalog-actions button { font-size: 13px; padding-inline: 10px; }
 }
+
+.list-choice-row { display: flex; align-items: stretch; gap: 8px; }
+.list-choice-row > button:first-child { flex: 1; min-width: 0; }
+.list-choice-row .list-choice-delete {
+  width: 44px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  color: #a74e42;
+  font-size: 22px;
+}

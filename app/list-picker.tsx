@@ -3,22 +3,38 @@
 import { useState } from 'react';
 import { GENERAL, visibleItems, type ShoppingList } from '@/lib/shopping-lists';
 
-export function ListPicker({ familyId, lists, onChoose, onCreate, onSignOut }: {
+export function ListPicker({ familyId, lists, onChoose, onCreate, onDelete, onSignOut }: {
   familyId: string;
   lists: ShoppingList[];
   onChoose: (id: string) => void;
   onCreate: (name: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
   onSignOut: () => void;
 }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const locked = busy || deleting;
+
+  async function confirmDelete(list: ShoppingList) {
+    if (locked || !window.confirm(`Eliminare la lista «${list.name}»? Le quantità di questa lista saranno rimosse anche da Generale.`)) return;
+    setDeleting(true);
+    setError('');
+    try {
+      await onDelete(list.id);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Non riesco a eliminare la lista.');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <main className="list-choice">
       <header>
         <div className="brand"><span className="brand-mark">g</span><span>giro<span>spesa</span></span></div>
-        <button className="outline-btn" onClick={onSignOut}>Esci</button>
+        <button className="outline-btn" disabled={locked} onClick={onSignOut}>Esci</button>
       </header>
       <h1>Scegli la lista</h1>
       <p>Apri una lista oppure creane una nuova.</p>
@@ -27,16 +43,21 @@ export function ListPicker({ familyId, lists, onChoose, onCreate, onSignOut }: {
           const general = list.id === familyId;
           const count = visibleItems(lists, list.id, familyId).length;
           return (
-            <button className={general ? 'list-choice-general' : undefined} key={list.id} onClick={() => onChoose(list.id)}>
-              <strong>{general ? GENERAL : list.name}</strong>
-              <small>{count} {count === 1 ? 'prodotto' : 'prodotti'}{general && ' · include le altre liste'}</small>
-            </button>
+            <div className="list-choice-row" key={list.id}>
+              <button className={general ? 'list-choice-general' : undefined} disabled={locked} onClick={() => onChoose(list.id)}>
+                <strong>{general ? GENERAL : list.name}</strong>
+                <small>{count} {count === 1 ? 'prodotto' : 'prodotti'}{general && ' · include le altre liste'}</small>
+              </button>
+              {!general && <button type="button" className="list-choice-delete" aria-label={`Elimina ${list.name}`} disabled={locked} onClick={() => void confirmDelete(list)}>
+                <span aria-hidden="true">🗑︎</span>
+              </button>}
+            </div>
           );
         })}
       </div>
       <form onSubmit={async event => {
         event.preventDefault();
-        if (busy || !name.trim()) return;
+        if (locked || !name.trim()) return;
         setBusy(true);
         setError('');
         try {
@@ -48,7 +69,7 @@ export function ListPicker({ familyId, lists, onChoose, onCreate, onSignOut }: {
         }
       }}>
         <input aria-label="Nome nuova lista" placeholder="Nome nuova lista" value={name} onChange={event => setName(event.target.value)} maxLength={40} required />
-        <button className="primary-btn" disabled={busy || !name.trim()}>{busy ? 'Creo…' : 'Crea'}</button>
+        <button className="primary-btn" disabled={locked || !name.trim()}>{busy ? 'Creo…' : 'Crea'}</button>
       </form>
       {error && <p className="auth-error" role="alert">{error}</p>}
     </main>

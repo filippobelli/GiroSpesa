@@ -164,6 +164,21 @@ export default function Home(){
    });
    openList(id);
  }
+ async function deleteList(id: string) {
+   if (id === familyId) return;
+   await saveQueueRef.current;
+   if (dataRef.current !== lastPersistedRef.current) {
+     throw new Error('Attendi la sincronizzazione prima di eliminare la lista.');
+   }
+   const { error } = await supabase.from('shopping_lists').delete()
+     .eq('family_id', familyId).eq('id', id).eq('status', 'active');
+   if (error) throw new Error(error.message);
+   const current = dataRef.current;
+   const next = { ...current, lists: current.lists?.filter(list => list.id !== id) };
+   replaceData(current.trip?.id && current.trip.id !== id
+     ? chooseList(next, current.trip.id, familyId)
+     : { ...next, trip: null });
+ }
  function startTrip(storeId: string) {
    setPreferredStore(storeId);
    setShowLists(true);
@@ -179,7 +194,7 @@ export default function Home(){
  if(needsFamily)return <main className="auth-page"><section className="auth-card"><a className="brand auth-brand" href="/"><span className="brand-mark">g</span><span>giro<span>spesa</span></span></a><div className="eyebrow">BENVENUTO/A</div><h1>Creiamo la tua famiglia</h1><p className="auth-intro">Scegli un nome per il vostro spazio. Potrai aggiungere i familiari quando la lista sarà pronta.</p><form className="auth-form" onSubmit={event=>{event.preventDefault();void createFamily()}}><label htmlFor="family-name">Nome della famiglia</label><input id="family-name" required maxLength={80} value={newFamilyName} onChange={event=>setNewFamilyName(event.target.value)}/>{appError&&<p className="auth-error" role="alert">{appError}</p>}<button className="primary-btn" disabled={familyBusy}>{familyBusy?'Preparo il tuo spazio…':'Crea la famiglia e importa la lista'}</button></form><button className="auth-signout" onClick={()=>void signOut()}>Esci da {userEmail}</button></section></main>;
  if(!familyId)return <main className="auth-page"><section className="auth-card"><div className="auth-symbol">!</div><h1>Non riesco a caricare GiroSpesa</h1><p className="auth-intro">{appError||'Controlla la connessione e riprova.'}</p><button className="primary-btn" onClick={()=>window.location.reload()}>Riprova</button><button className="auth-signout" onClick={()=>void signOut()}>Esci</button></section></main>;
  if (data.lists && (showLists || !data.trip)) {
-   return <ListPicker familyId={familyId} lists={data.lists} onChoose={openList} onCreate={createList} onSignOut={() => void signOut()} />;
+   return <ListPicker familyId={familyId} lists={data.lists} onChoose={openList} onCreate={createList} onDelete={deleteList} onSignOut={() => void signOut()} />;
  }
  const activeList = data.lists?.find(list => list.id === data.trip?.id);
  const isGeneralList = activeList?.id === familyId;
