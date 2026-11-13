@@ -262,3 +262,7 @@ html,body{overscroll-behavior-y:none}
 @media (max-width: 780px) {
   .progress-row { display: none; }
 }
+
+.store-page-heading { justify-content: flex-end; }
+.store-page-heading .heading-actions { flex-wrap: nowrap; align-items: stretch; }
+.store-page-heading .heading-actions button { min-height: 44px; }
