@@ -225,7 +225,7 @@ html,body{overscroll-behavior-y:none}
   padding: 22px 18px max(22px, env(safe-area-inset-bottom));
 }
 .list-choice header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
-.list-choice header .brand { margin: 0; }
+.list-choice header .brand { margin: 0; padding: 0; }
 .list-choice h1 { margin: 24px 0 8px; font-size: 30px; }
 .list-choice p { margin: 0 0 16px; }
 .list-choice-options { display: grid; gap: 8px; }
@@ -281,4 +281,16 @@ html,body{overscroll-behavior-y:none}
   }
   .trip-picker-backdrop .modal { max-height: 100%; }
   .trip-picker-backdrop .picker-list { min-height: 80px; }
+}
+
+.catalog-actions {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.catalog-actions button { min-width: 0; min-height: 44px; height: auto; margin: 0; padding: 8px 12px; }
+@media (max-width: 380px) {
+  .catalog-actions button { font-size: 13px; padding-inline: 10px; }
 }
