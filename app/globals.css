@@ -327,3 +327,28 @@ html,body{overscroll-behavior-y:none}
 }
 .sync-label { display: block; width: 0; }
 .topbar .sync i { margin-right: 0; }
+
+.trip-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  min-height: 32px;
+}
+.topbar-store-select .trip-dropdown { font-size: 14px; font-weight: 700; color: var(--ink); }
+.trip-dropdown-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-dropdown-arrow {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -4px 3px 0 0;
+  border-right: 1.5px solid;
+  border-bottom: 1.5px solid;
+  transform: rotate(45deg);
+}
+.trip-dropdown select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.trip-dropdown:focus-within { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+@media (max-width: 780px) {
+  .topbar-store-select .trip-dropdown { font-size: 16px; }
+}
