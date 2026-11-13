@@ -252,3 +252,13 @@ html,body{overscroll-behavior-y:none}
 .store-card-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .store-card-chevron { flex: none; font-size: 20px; }
 .store-card-toggle[aria-expanded="true"] .store-card-chevron { transform: rotate(180deg); }
+
+.trip-add-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 12px 0 16px;
+}
+.progress-row[hidden] { display: none; }
+@media (max-width: 780px) {
+  .progress-row { display: none; }
+}
