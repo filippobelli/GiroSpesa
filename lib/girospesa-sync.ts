@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Purchase } from './purchase-report';
 import { DEFAULT_ORDER } from './departments';
 import { chooseList, GENERAL, type ShoppingList } from './shopping-lists';
 
@@ -16,7 +17,7 @@ export type Product = {
 export type Store = { id: string; name: string; color: string; order: string[] };
 export type TripItem = { productId: string; qty: string; checked: boolean };
 export type Trip = { id?: string; storeId: string; items: TripItem[] };
-export type Data = { products: Product[]; stores: Store[]; trip: Trip | null; lists?: ShoppingList[] };
+export type Data = { products: Product[]; stores: Store[]; trip: Trip | null; lists?: ShoppingList[]; purchases?: Purchase[] };
 
 type Client = SupabaseClient;
 
@@ -122,8 +123,28 @@ export async function loadFamilyData(client: Client, familyId: string, selectedL
     };
   });
   lists.sort((a, b) => Number(b.id === familyId) - Number(a.id === familyId));
-  const data = { products, stores, lists, trip: null };
+  const purchases = await loadPurchases(client, familyId);
+  const data = { products, stores, lists, purchases, trip: null };
   return selectedListId ? chooseList(data, selectedListId, familyId) : data;
+}
+
+// Completed rows hold immutable purchase snapshots, independent of the catalog.
+const PURCHASE_PREFIX = '@girospesa-purchase:';
+
+async function loadPurchases(client: Client, familyId: string): Promise<Purchase[]> {
+  const purchases: Purchase[] = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from('shopping_lists').select('id,name,completed_at')
+      .eq('family_id', familyId).eq('status', 'completed').like('name', PURCHASE_PREFIX + '%')
+      .order('completed_at').order('id').range(offset, offset + pageSize - 1);
+    throwIfError(error);
+    for (const row of data ?? []) {
+      const snapshot = JSON.parse(row.name.slice(PURCHASE_PREFIX.length));
+      purchases.push({ ...snapshot, id: row.id, date: row.completed_at });
+    }
+    if ((data?.length ?? 0) < pageSize) return purchases;
+  }
 }
 
 async function loadListItems(client: Client, familyId: string) {
@@ -322,6 +343,20 @@ export async function persistDataChanges(client: Client, familyId: string, userI
   });
   if (pricesToInsert.length) {
     const { error } = await client.from('product_prices').insert(pricesToInsert);
+    throwIfError(error);
+  }
+
+  const savedPurchases = new Set(previous.purchases?.map(purchase => purchase.id));
+  const newPurchases = (next.purchases ?? []).filter(purchase => !savedPurchases.has(purchase.id));
+  if (newPurchases.length) {
+    const { error } = await client.from('shopping_lists').upsert(newPurchases.map(({ id, date, ...snapshot }) => ({
+      id,
+      family_id: familyId,
+      created_by: userId,
+      status: 'completed',
+      completed_at: date,
+      name: PURCHASE_PREFIX + JSON.stringify(snapshot),
+    })), { onConflict: 'id', ignoreDuplicates: true });
     throwIfError(error);
   }
 

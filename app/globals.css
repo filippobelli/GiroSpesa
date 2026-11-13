@@ -352,3 +352,39 @@ html,body{overscroll-behavior-y:none}
 @media (max-width: 780px) {
   .topbar-store-select .trip-dropdown { font-size: 16px; }
 }
+
+.purchase-report { max-width: 780px; margin-inline: auto; }
+.purchase-report h1 { margin: 0 0 16px; font-size: 26px; }
+.report-periods, .report-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.report-periods button, .report-date button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+}
+.report-periods button[aria-pressed="true"] { background: #426b54; color: #fff; }
+.report-date { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; text-align: center; gap: 8px; margin: 12px 0; }
+.report-date button { font-size: 20px; }
+.report-date button:disabled { opacity: .4; }
+.report-totals { background: var(--pale); border-radius: 10px; padding: 12px; font-size: 12px; margin-bottom: 12px; }
+.report-totals b { display: block; color: #28573e; font-size: 18px; overflow-wrap: anywhere; }
+.report-coverage { font-size: 13px; color: #536158; }
+.report-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.report-chart, .report-table { background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.report-chart { padding: 10px; }
+.report-chart h2 { font-size: 14px; margin: 0 0 8px; }
+.report-bar { font-size: 12px; margin-top: 6px; }
+.report-bar div { display: flex; justify-content: space-between; gap: 5px; }
+.report-bar span, .report-table td:first-child { overflow-wrap: anywhere; }
+.report-bar strong, .report-table td:nth-child(n+2) { white-space: nowrap; }
+.report-bar meter { width: 100%; display: block; }
+.report-table { overflow: hidden; }
+.report-table table { width: 100%; border-collapse: collapse; }
+.report-table th, .report-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+.report-table th { font-size: 13px; }
+.report-table :is(th,td):nth-child(n+2) { text-align: right; }
+.report-table small { display: block; color: #536158; }
+
+@media (max-width: 780px) {
+  .mobile-nav button { flex: 1; width: auto; }
+}
