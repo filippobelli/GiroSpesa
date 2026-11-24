@@ -374,3 +374,6 @@ html,body{overscroll-behavior-y:none}
 @media (max-width: 780px) {
   .mobile-nav button { flex: 1; width: auto; }
 }
+
+/* Lista di casa: prezzo del negozio scelto sotto il nome */
+.catalog-card>small.catalog-price { color: var(--ink); font-weight: 600; }
