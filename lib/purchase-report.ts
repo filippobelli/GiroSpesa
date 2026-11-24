@@ -1,4 +1,4 @@
-import type { Data } from './girospesa-sync';
+import type { Data, Product } from './girospesa-sync';
 
 export type Purchase = {
   id: string;
@@ -7,6 +7,8 @@ export type Purchase = {
   quantity: number;
   unitCents: number | null;
   date: string;
+  /** Store of the trip; missing on purchases recorded before it was saved. */
+  storeId?: string;
 };
 
 export function recordPurchase(data: Data, id: string): Data {
@@ -22,6 +24,7 @@ export function recordPurchase(data: Data, id: string): Data {
     quantity: Math.max(1, Number.parseInt(item.qty, 10) || 1),
     unitCents: Number.isFinite(price) ? Math.round(price * 100) : null,
     date: new Date().toISOString(),
+    storeId: trip.storeId,
   };
   return {
     ...data,
@@ -60,7 +63,19 @@ export function reportPeriod(period: Period, offset: number, now = new Date()) {
   return { start: dayKey(start), end: dayKey(utc(year, month - 1, monday + 7)), label: shortDate.format(start) + ' – ' + shortDate.format(last) + ' ' + last.getUTCFullYear() };
 }
 
-export function summarizePurchases(purchases: Purchase[], start: string, end: string) {
+/**
+ * Price of one unit in cents. The price saved at purchase time wins; when none was saved
+ * (no price in the catalog yet), use today's catalog price so a price added later counts.
+ */
+export function unitPrice(purchase: Purchase, products: Product[]): number | null {
+  if (purchase.unitCents !== null && purchase.unitCents !== undefined) return purchase.unitCents;
+  const prices = products.find(product => product.id === purchase.productId)?.prices ?? {};
+  const own = purchase.storeId ? prices[purchase.storeId] : undefined;
+  const price = Number.isFinite(own) ? own : Object.values(prices).find(value => Number.isFinite(value));
+  return price !== undefined && Number.isFinite(price) ? Math.round(price * 100) : null;
+}
+
+export function summarizePurchases(purchases: Purchase[], start: string, end: string, products: Product[] = []) {
   const totals = new Map<string, { id: string; name: string; qty: number; priced: number; cents: number }>();
   for (const purchase of purchases) {
     const date = new Date(purchase.date);
@@ -69,9 +84,10 @@ export function summarizePurchases(purchases: Purchase[], start: string, end: st
     if (day < start || day >= end) continue;
     const row = totals.get(purchase.productId) ?? { id: purchase.productId, name: purchase.name, qty: 0, priced: 0, cents: 0 };
     row.qty += purchase.quantity;
-    if (purchase.unitCents !== null) {
+    const cents = unitPrice(purchase, products);
+    if (cents !== null) {
       row.priced += purchase.quantity;
-      row.cents += purchase.quantity * purchase.unitCents;
+      row.cents += purchase.quantity * cents;
     }
     totals.set(row.id, row);
   }

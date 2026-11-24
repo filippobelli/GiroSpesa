@@ -2,16 +2,17 @@
 
 import { useState } from 'react';
 import { reportPeriod, summarizePurchases, type Period, type Purchase } from '@/lib/purchase-report';
+import type { Product } from '@/lib/girospesa-sync';
 
 const periods = { week: 'Settimana', month: 'Mese', year: 'Anno' };
 const currency = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
 const euro = (cents: number) => currency.format(cents / 100);
 
-export function PurchaseReport({ purchases }: { purchases: Purchase[] }) {
+export function PurchaseReport({ purchases, products }: { purchases: Purchase[]; products: Product[] }) {
   const [period, setPeriod] = useState<Period>('week');
   const [offset, setOffset] = useState(0);
   const { start, end, label } = reportPeriod(period, offset);
-  const rows = summarizePurchases(purchases, start, end);
+  const rows = summarizePurchases(purchases, start, end, products);
   const qty = rows.reduce((sum, row) => sum + row.qty, 0);
   const priced = rows.reduce((sum, row) => sum + row.priced, 0);
   const cents = rows.reduce((sum, row) => sum + row.cents, 0);
