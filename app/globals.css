@@ -278,16 +278,14 @@ html,body{overscroll-behavior-y:none}
   .trip-picker-backdrop .picker-list { min-height: 80px; }
 }
 
-.catalog-actions {
-  display: flex;
-  align-items: stretch;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.catalog-actions button { min-width: 0; min-height: 44px; height: auto; margin: 0; padding: 8px 12px; }
-@media (max-width: 380px) {
-  .catalog-actions button { font-size: 13px; padding-inline: 10px; }
+/* Lista di casa: ricerca e "+ Prodotto" sulla stessa riga, fissi in alto */
+.catalog-toolbar { position: sticky; top: 0; z-index: 7; background: var(--bg); padding: 10px 0; margin: 0 0 8px; }
+.catalog-toolbar .search { flex: 1 1 auto; min-width: 0; width: auto; max-width: 420px; }
+.catalog-toolbar .catalog-add { flex: none; margin: 0 0 0 auto; white-space: nowrap; }
+@media (max-width: 780px) {
+  .catalog-toolbar { top: calc(52px + env(safe-area-inset-top)); gap: 8px; padding: 6px 0 10px; }
+  .catalog-toolbar .search { max-width: none; }
+  .catalog-toolbar .catalog-add { min-height: 50px; padding: 0 14px; border-radius: 12px; }
 }
 
 .list-choice-row { display: flex; align-items: stretch; gap: 8px; }
